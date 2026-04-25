@@ -1,4 +1,5 @@
 const { Sequelize } = require('sequelize');
+const { UserModel } = require('@/models/user.model');
 
 const sequelize = new Sequelize(
   process.env.DB_NAME || 'web_api_course_work',
@@ -16,7 +17,10 @@ const sequelize = new Sequelize(
   }
 );
 
+const User = UserModel(sequelize);
+
 module.exports = {
   sequelize,
   Sequelize,
+  User,
 };

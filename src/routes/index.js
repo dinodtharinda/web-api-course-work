@@ -1,5 +1,6 @@
 const router = require('express').Router();
 
+const authRoute = require('./auth.route');
 const testRoute = require('./test.route');
 
 router.get('/health', (req, res) => {
@@ -10,5 +11,6 @@ router.get('/health', (req, res) => {
 });
 
 router.use('/test', testRoute);
+router.use('/auth', authRoute);
 
 module.exports = router;
