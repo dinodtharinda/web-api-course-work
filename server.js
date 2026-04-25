@@ -4,6 +4,7 @@ const express = require('express');
 const cors = require('cors');
 
 const { appConfig } = require('@/configs/constants.config');
+const { connectToDatabase } = require('@/configs/database.config');
 const corsOptions = require('@/configs/cors.config');
 const { infoLog, errorLog } = require('@/utils/logger.util');
 const routes = require('@/routes');
@@ -22,6 +23,8 @@ app.use(globalErrorHandler);
 
 (async () => {
   try {
+    await connectToDatabase();
+
     app.listen(appConfig.port, () => {
       infoLog(`${appConfig.name} running at port: ${appConfig.port}`);
     });
