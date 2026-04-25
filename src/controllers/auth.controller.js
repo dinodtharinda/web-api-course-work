@@ -109,7 +109,39 @@ const login = async (req, res, next) => {
   }
 };
 
+const me = async (req, res, next) => {
+  try {
+    const user = await User.findByPk(req.auth.sub, {
+      attributes: ['id', 'firstName', 'lastName', 'email', 'role', 'isActive', 'createdAt', 'updatedAt'],
+    });
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'User not found',
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: 'Current user profile',
+      data: user,
+    });
+  } catch (err) {
+    return next(err);
+  }
+};
+
+const adminGuardCheck = async (req, res) => {
+  return res.status(200).json({
+    success: true,
+    message: 'Admin access granted',
+  });
+};
+
 module.exports = {
   register,
   login,
+  me,
+  adminGuardCheck,
 };
