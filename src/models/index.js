@@ -1,4 +1,6 @@
 const { Sequelize } = require('sequelize');
+const { ProvinceModel } = require('@/models/province.model');
+const { DistrictModel } = require('@/models/district.model');
 const { UserModel } = require('@/models/user.model');
 
 const sequelize = new Sequelize(
@@ -17,10 +19,24 @@ const sequelize = new Sequelize(
   }
 );
 
+const Province = ProvinceModel(sequelize);
+const District = DistrictModel(sequelize);
 const User = UserModel(sequelize);
+
+Province.hasMany(District, {
+  foreignKey: 'provinceId',
+  as: 'districts',
+});
+
+District.belongsTo(Province, {
+  foreignKey: 'provinceId',
+  as: 'province',
+});
 
 module.exports = {
   sequelize,
   Sequelize,
+  Province,
+  District,
   User,
 };
