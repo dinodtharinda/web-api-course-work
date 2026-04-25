@@ -5,6 +5,12 @@ const appConfig = {
   apiPrefix: process.env.API_PREFIX || '/api',
 };
 
+const authConfig = {
+  jwtAccessSecret: process.env.JWT_ACCESS_SECRET || 'dev-access-secret',
+  jwtAccessExpiresIn: process.env.JWT_ACCESS_EXPIRES_IN || '1h',
+};
+
 module.exports = {
   appConfig,
+  authConfig,
 };

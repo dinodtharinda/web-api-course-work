@@ -2,6 +2,8 @@ const bcrypt = require('bcryptjs');
 
 const { User } = require('@/models');
 const { USER_ROLES } = require('@/models/user.model');
+const { authConfig } = require('@/configs/constants.config');
+const { generateAccessToken } = require('@/utils/token.util');
 
 const register = async (req, res, next) => {
   try {
@@ -58,6 +60,56 @@ const register = async (req, res, next) => {
   }
 };
 
+const login = async (req, res, next) => {
+  try {
+    const { email, password } = req.body;
+
+    if (!email || !password) {
+      return res.status(400).json({
+        success: false,
+        message: 'email and password are required',
+      });
+    }
+
+    const normalizedEmail = String(email).trim().toLowerCase();
+    const user = await User.findOne({ where: { email: normalizedEmail } });
+
+    if (!user) {
+      return res.status(401).json({
+        success: false,
+        message: 'Invalid credentials',
+      });
+    }
+
+    const isPasswordValid = await bcrypt.compare(String(password), user.passwordHash);
+    if (!isPasswordValid) {
+      return res.status(401).json({
+        success: false,
+        message: 'Invalid credentials',
+      });
+    }
+
+    const accessToken = generateAccessToken({
+      sub: user.id,
+      email: user.email,
+      role: user.role,
+    });
+
+    return res.status(200).json({
+      success: true,
+      message: 'Login successful',
+      data: {
+        accessToken,
+        tokenType: 'Bearer',
+        expiresIn: authConfig.jwtAccessExpiresIn,
+      },
+    });
+  } catch (err) {
+    return next(err);
+  }
+};
+
 module.exports = {
   register,
+  login,
 };
