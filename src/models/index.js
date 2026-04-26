@@ -1,6 +1,7 @@
 const { Sequelize } = require('sequelize');
 const { ProvinceModel } = require('@/models/province.model');
 const { DistrictModel } = require('@/models/district.model');
+const { PoliceStationModel } = require('@/models/police-station.model');
 const { UserModel } = require('@/models/user.model');
 
 const sequelize = new Sequelize(
@@ -21,6 +22,7 @@ const sequelize = new Sequelize(
 
 const Province = ProvinceModel(sequelize);
 const District = DistrictModel(sequelize);
+const PoliceStation = PoliceStationModel(sequelize);
 const User = UserModel(sequelize);
 
 Province.hasMany(District, {
@@ -33,10 +35,21 @@ District.belongsTo(Province, {
   as: 'province',
 });
 
+District.hasMany(PoliceStation, {
+  foreignKey: 'districtId',
+  as: 'policeStations',
+});
+
+PoliceStation.belongsTo(District, {
+  foreignKey: 'districtId',
+  as: 'district',
+});
+
 module.exports = {
   sequelize,
   Sequelize,
   Province,
   District,
+  PoliceStation,
   User,
 };
