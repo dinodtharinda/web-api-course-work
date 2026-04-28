@@ -1,4 +1,4 @@
-const { Vehicle, TrackingDevice, District } = require('@/models');
+const { Vehicle, TrackingDevice, District, LocationPing } = require('@/models');
 
 const listVehicles = async (req, res, next) => {
   try {
@@ -84,7 +84,51 @@ const createVehicle = async (req, res, next) => {
   }
 };
 
+const listVehiclePings = async (req, res, next) => {
+  try {
+    const { registrationNo } = req.params;
+
+    const vehicle = await Vehicle.findOne({
+      where: { registrationNo },
+      attributes: ['id', 'registrationNo', 'ownerName', 'districtId', 'isActive', 'createdAt', 'updatedAt'],
+    });
+
+    if (!vehicle) {
+      return res.status(404).json({
+        success: false,
+        message: 'Vehicle not found',
+      });
+    }
+
+    const locationPings = await LocationPing.findAll({
+      where: { vehicleId: vehicle.id },
+      attributes: ['id', 'latitude', 'longitude', 'recordedAt', 'sourceType', 'createdAt', 'updatedAt'],
+      order: [
+        ['recordedAt', 'DESC'],
+        ['id', 'DESC'],
+      ],
+    });
+
+    return res.status(200).json({
+      success: true,
+      message: 'Vehicle pings retrieved',
+      data: locationPings.map((ping) => ({
+        id: ping.id,
+        latitude: ping.latitude,
+        longitude: ping.longitude,
+        timestamp: ping.recordedAt,
+        sourceType: ping.sourceType,
+        createdAt: ping.createdAt,
+        updatedAt: ping.updatedAt,
+      })),
+    });
+  } catch (err) {
+    return next(err);
+  }
+};
+
 module.exports = {
   createVehicle,
   listVehicles,
+  listVehiclePings,
 };

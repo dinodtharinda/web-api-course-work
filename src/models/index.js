@@ -3,6 +3,7 @@ const { ProvinceModel } = require('@/models/province.model');
 const { DistrictModel } = require('@/models/district.model');
 const { PoliceStationModel } = require('@/models/police-station.model');
 const { VehicleModel } = require('@/models/vehicle.model');
+const { LocationPingModel } = require('@/models/location-ping.model');
 const { TrackingDeviceModel } = require('@/models/tracking-device.model');
 const { UserModel } = require('@/models/user.model');
 
@@ -26,6 +27,7 @@ const Province = ProvinceModel(sequelize);
 const District = DistrictModel(sequelize);
 const PoliceStation = PoliceStationModel(sequelize);
 const Vehicle = VehicleModel(sequelize);
+const LocationPing = LocationPingModel(sequelize);
 const TrackingDevice = TrackingDeviceModel(sequelize);
 const User = UserModel(sequelize);
 
@@ -69,6 +71,16 @@ TrackingDevice.belongsTo(Vehicle, {
   as: 'vehicle',
 });
 
+Vehicle.hasMany(LocationPing, {
+  foreignKey: 'vehicleId',
+  as: 'locationPings',
+});
+
+LocationPing.belongsTo(Vehicle, {
+  foreignKey: 'vehicleId',
+  as: 'vehicle',
+});
+
 module.exports = {
   sequelize,
   Sequelize,
@@ -76,6 +88,7 @@ module.exports = {
   District,
   PoliceStation,
   Vehicle,
+  LocationPing,
   TrackingDevice,
   User,
 };
