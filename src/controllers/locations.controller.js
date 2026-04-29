@@ -1,4 +1,4 @@
-const { Province, District } = require('@/models');
+const { Province, District, Vehicle, LocationPing } = require('@/models');
 
 const listProvinces = async (req, res, next) => {
   try {
@@ -29,6 +29,46 @@ const listProvinces = async (req, res, next) => {
   }
 };
 
+const ingestLocationPing = async (req, res, next) => {
+  try {
+    const { registrationNo, latitude, longitude, recordedAt, sourceType } = req.body;
+
+    if (!registrationNo || latitude === undefined || longitude === undefined) {
+      return res.status(400).json({
+        success: false,
+        message: 'registrationNo, latitude and longitude are required',
+      });
+    }
+
+    const vehicle = await Vehicle.findOne({
+      where: { registrationNo: String(registrationNo).trim().toUpperCase() },
+    });
+    if (!vehicle) {
+      return res.status(404).json({
+        success: false,
+        message: 'Vehicle not found',
+      });
+    }
+
+    const locationPing = await LocationPing.create({
+      vehicleId: vehicle.id,
+      latitude: parseFloat(latitude),
+      longitude: parseFloat(longitude),
+      recordedAt: recordedAt ? new Date(recordedAt) : new Date(),
+      sourceType: sourceType ? String(sourceType).trim().toLowerCase() : 'device',
+    });
+
+    return res.status(201).json({
+      success: true,
+      message: 'Location ping ingested',
+      data: locationPing,
+    });
+  } catch (err) {
+    return next(err);
+  }
+};
+
 module.exports = {
   listProvinces,
+  ingestLocationPing,
 };
