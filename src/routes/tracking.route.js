@@ -1,7 +1,8 @@
 const router = require('express').Router();
 
-const { ingestLocationPing } = require('@/controllers/locations.controller');
+const { ingestLocationPing, getLatestLocation } = require('@/controllers/locations.controller');
 
 router.post('/pings', ingestLocationPing);
+router.get('/vehicles/:registrationNo/latest', getLatestLocation);
 
 module.exports = router;

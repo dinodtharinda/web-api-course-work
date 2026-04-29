@@ -68,6 +68,64 @@ const ingestLocationPing = async (req, res, next) => {
   }
 };
 
+const getLatestLocation = async (req, res, next) => {
+  try {
+    const { registrationNo } = req.params;
+
+    if (!registrationNo) {
+      return res.status(400).json({
+        success: false,
+        message: 'registrationNo is required',
+      });
+    }
+
+    const vehicle = await Vehicle.findOne({
+      where: { registrationNo: String(registrationNo).trim() },
+      attributes: ['id', 'registrationNo'],
+    });
+
+    if (!vehicle) {
+      return res.status(404).json({
+        success: false,
+        message: 'Vehicle not found',
+      });
+    }
+
+    const latestPing = await LocationPing.findOne({
+      where: { vehicleId: vehicle.id },
+      attributes: ['id', 'latitude', 'longitude', 'recordedAt', 'sourceType', 'createdAt', 'updatedAt'],
+      order: [
+        ['recordedAt', 'DESC'],
+        ['id', 'DESC'],
+      ],
+    });
+
+    if (!latestPing) {
+      return res.status(404).json({
+        success: false,
+        message: 'No location pings for this vehicle',
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: 'Latest location retrieved',
+      data: {
+        id: latestPing.id,
+        vehicleId: vehicle.id,
+        registrationNo: vehicle.registrationNo,
+        latitude: latestPing.latitude,
+        longitude: latestPing.longitude,
+        recordedAt: latestPing.recordedAt,
+        sourceType: latestPing.sourceType,
+        createdAt: latestPing.createdAt,
+        updatedAt: latestPing.updatedAt,
+      },
+    });
+  } catch (err) {
+    return next(err);
+  }
+};
 module.exports = {
   listProvinces,
   ingestLocationPing,
