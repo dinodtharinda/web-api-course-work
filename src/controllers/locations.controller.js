@@ -1,3 +1,4 @@
+const { Op } = require('sequelize');
 const { Province, District, Vehicle, LocationPing } = require('@/models');
 
 const listProvinces = async (req, res, next) => {
@@ -126,7 +127,96 @@ const getLatestLocation = async (req, res, next) => {
     return next(err);
   }
 };
+
+const getMovementHistory = async (req, res, next) => {
+  try {
+    const { registrationNo } = req.params;
+    const { from, to } = req.query;
+
+    if (!registrationNo) {
+      return res.status(400).json({
+        success: false,
+        message: 'registrationNo is required',
+      });
+    }
+
+    if (!from || !to) {
+      return res.status(400).json({
+        success: false,
+        message: 'from and to are required',
+      });
+    }
+
+    const fromDate = new Date(from);
+    const toDate = new Date(to);
+
+    if (Number.isNaN(fromDate.getTime()) || Number.isNaN(toDate.getTime())) {
+      return res.status(422).json({
+        success: false,
+        message: 'from and to must be valid date-time values',
+      });
+    }
+
+    if (fromDate > toDate) {
+      return res.status(422).json({
+        success: false,
+        message: 'from must be earlier than or equal to to',
+      });
+    }
+
+    const vehicle = await Vehicle.findOne({
+      where: { registrationNo: String(registrationNo).trim().toUpperCase() },
+      attributes: ['id', 'registrationNo'],
+    });
+
+    if (!vehicle) {
+      return res.status(404).json({
+        success: false,
+        message: 'Vehicle not found',
+      });
+    }
+
+    const movementHistory = await LocationPing.findAll({
+      where: {
+        vehicleId: vehicle.id,
+        recordedAt: {
+          [Op.between]: [fromDate, toDate],
+        },
+      },
+      attributes: ['id', 'latitude', 'longitude', 'recordedAt', 'sourceType', 'createdAt', 'updatedAt'],
+      order: [
+        ['recordedAt', 'ASC'],
+        ['id', 'ASC'],
+      ],
+    });
+
+    return res.status(200).json({
+      success: true,
+      message: 'Movement history retrieved',
+      data: {
+        vehicleId: vehicle.id,
+        registrationNo: vehicle.registrationNo,
+        from: fromDate,
+        to: toDate,
+        count: movementHistory.length,
+        history: movementHistory.map((ping) => ({
+          id: ping.id,
+          latitude: ping.latitude,
+          longitude: ping.longitude,
+          recordedAt: ping.recordedAt,
+          sourceType: ping.sourceType,
+          createdAt: ping.createdAt,
+          updatedAt: ping.updatedAt,
+        })),
+      },
+    });
+  } catch (err) {
+    return next(err);
+  }
+};
 module.exports = {
   listProvinces,
   ingestLocationPing,
+  getLatestLocation,
+  getMovementHistory,
 };
