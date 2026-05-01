@@ -214,9 +214,111 @@ const getMovementHistory = async (req, res, next) => {
     return next(err);
   }
 };
+
+const getFilteredHistory = async (req, res, next) => {
+  try {
+    const { provinceId, districtId } = req.query;
+
+    const parsedProvinceId = provinceId !== undefined ? Number.parseInt(provinceId, 10) : null;
+    const parsedDistrictId = districtId !== undefined ? Number.parseInt(districtId, 10) : null;
+
+    if (parsedProvinceId === null && parsedDistrictId === null) {
+      return res.status(400).json({
+        success: false,
+        message: 'provinceId or districtId is required',
+      });
+    }
+
+    if (parsedProvinceId !== null && (!Number.isInteger(parsedProvinceId) || parsedProvinceId <= 0)) {
+      return res.status(422).json({
+        success: false,
+        message: 'provinceId must be a positive integer',
+      });
+    }
+
+    if (parsedDistrictId !== null && (!Number.isInteger(parsedDistrictId) || parsedDistrictId <= 0)) {
+      return res.status(422).json({
+        success: false,
+        message: 'districtId must be a positive integer',
+      });
+    }
+
+    const movementHistory = await LocationPing.findAll({
+      attributes: ['id', 'latitude', 'longitude', 'recordedAt', 'sourceType', 'createdAt', 'updatedAt'],
+      include: [
+        {
+          model: Vehicle,
+          as: 'vehicle',
+          attributes: ['id', 'registrationNo', 'districtId'],
+          required: true,
+          include: [
+            {
+              model: District,
+              as: 'district',
+              attributes: ['id', 'name', 'code', 'provinceId', 'createdAt', 'updatedAt'],
+              required: true,
+              ...(parsedDistrictId !== null ? { where: { id: parsedDistrictId } } : {}),
+              include: [
+                {
+                  model: Province,
+                  as: 'province',
+                  attributes: ['id', 'name', 'createdAt', 'updatedAt'],
+                  required: true,
+                  ...(parsedProvinceId !== null ? { where: { id: parsedProvinceId } } : {}),
+                },
+              ],
+            },
+          ],
+        },
+      ],
+      order: [
+        ['recordedAt', 'DESC'],
+        ['id', 'DESC'],
+      ],
+    });
+
+    return res.status(200).json({
+      success: true,
+      message: 'Filtered movement history retrieved',
+      data: {
+        filters: {
+          provinceId: parsedProvinceId,
+          districtId: parsedDistrictId,
+        },
+        count: movementHistory.length,
+        history: movementHistory.map((ping) => ({
+          id: ping.id,
+          latitude: ping.latitude,
+          longitude: ping.longitude,
+          recordedAt: ping.recordedAt,
+          sourceType: ping.sourceType,
+          createdAt: ping.createdAt,
+          updatedAt: ping.updatedAt,
+          vehicle: {
+            id: ping.vehicle.id,
+            registrationNo: ping.vehicle.registrationNo,
+          },
+          district: {
+            id: ping.vehicle.district.id,
+            name: ping.vehicle.district.name,
+            code: ping.vehicle.district.code,
+            provinceId: ping.vehicle.district.provinceId,
+          },
+          province: {
+            id: ping.vehicle.district.province.id,
+            name: ping.vehicle.district.province.name,
+          },
+        })),
+      },
+    });
+  } catch (err) {
+    return next(err);
+  }
+};
 module.exports = {
   listProvinces,
   ingestLocationPing,
   getLatestLocation,
   getMovementHistory,
+  getFilteredHistory,
 };
