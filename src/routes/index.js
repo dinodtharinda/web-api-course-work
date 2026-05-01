@@ -6,12 +6,10 @@ const stationsRoute = require('./stations.route');
 const vehiclesRoute = require('./vehicles.route');
 const trackingRoute = require('./tracking.route');
 const testRoute = require('./test.route');
+const { sendSuccess } = require('@/utils/response.util');
 
 router.get('/health', (req, res) => {
-  res.status(200).json({
-    success: true,
-    message: 'API is running',
-  });
+  return sendSuccess(res, 200, 'API is running');
 });
 
 router.use('/test', testRoute);
