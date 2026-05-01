@@ -1,8 +1,26 @@
+const { Op } = require('sequelize');
 const { Vehicle, TrackingDevice, District, LocationPing } = require('@/models');
+const { parseListQuery } = require('@/utils/list-query.util');
 
 const listVehicles = async (req, res, next) => {
   try {
-    const vehicles = await Vehicle.findAll({
+    const { page, pageSize, limit, offset, sortBy, sortOrder, search } = parseListQuery(req.query, {
+      defaultSortBy: 'registrationNo',
+      defaultSortOrder: 'ASC',
+      allowedSortBy: ['registrationNo', 'ownerName', 'isActive', 'createdAt', 'updatedAt'],
+    });
+
+    const where = search
+      ? {
+          [Op.or]: [
+            { registrationNo: { [Op.like]: `%${search}%` } },
+            { ownerName: { [Op.like]: `%${search}%` } },
+          ],
+        }
+      : undefined;
+
+    const { rows: vehicles, count: total } = await Vehicle.findAndCountAll({
+      where,
       include: [
         {
           model: District,
@@ -17,13 +35,24 @@ const listVehicles = async (req, res, next) => {
           required: false,
         },
       ],
-      order: [['registrationNo', 'ASC']],
+      order: [[sortBy, sortOrder]],
+      limit,
+      offset,
     });
 
     return res.status(200).json({
       success: true,
       message: 'Vehicles retrieved',
       data: vehicles,
+      meta: {
+        page,
+        pageSize,
+        total,
+        totalPages: Math.max(Math.ceil(total / pageSize), 1),
+        sortBy,
+        sortOrder,
+        search: search || null,
+      },
     });
   } catch (err) {
     return next(err);

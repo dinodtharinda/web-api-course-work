@@ -1,8 +1,7 @@
+const { sendSuccess } = require('@/utils/response.util');
+
 const ping = (req, res) => {
-  res.status(200).json({
-    success: true,
-    message: 'pong',
-  });
+  return sendSuccess(res, 200, 'pong');
 };
 
 module.exports = {

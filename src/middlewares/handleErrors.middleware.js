@@ -1,16 +1,18 @@
+const { sendError } = require('@/utils/response.util');
+
 const notFoundHandler = (req, res) => {
-  res.status(404).json({
-    success: false,
-    message: 'Route not found',
+  return sendError(res, 404, 'Route not found', undefined, {
+    path: req.originalUrl,
+    method: req.method,
   });
 };
 
 const globalErrorHandler = (err, req, res, next) => {
   const statusCode = err.statusCode || 500;
 
-  res.status(statusCode).json({
-    success: false,
-    message: err.message || 'Internal server error',
+  return sendError(res, statusCode, err.message || 'Internal server error', err.errors, {
+    path: req.originalUrl,
+    method: req.method,
   });
 };
 
