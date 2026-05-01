@@ -1,12 +1,29 @@
 const { Op } = require('sequelize');
 const { Province, District, Vehicle, LocationPing } = require('@/models');
+const { parseListQuery } = require('@/utils/list-query.util');
 
 const listProvinces = async (req, res, next) => {
   try {
     const includeDistricts = String(req.query.includeDistricts || '').toLowerCase() === 'true';
+    const { page, pageSize, limit, offset, sortBy, sortOrder, search } = parseListQuery(req.query, {
+      defaultSortBy: 'name',
+      defaultSortOrder: 'ASC',
+      allowedSortBy: ['name', 'code', 'createdAt', 'updatedAt'],
+    });
 
-    const provinces = await Province.findAll({
-      order: [['name', 'ASC']],
+    const where = search
+      ? {
+          name: {
+            [Op.like]: `%${search}%`,
+          },
+        }
+      : undefined;
+
+    const { rows: provinces, count: total } = await Province.findAndCountAll({
+      where,
+      order: [[sortBy, sortOrder]],
+      limit,
+      offset,
       include: includeDistricts
         ? [
             {
@@ -24,6 +41,15 @@ const listProvinces = async (req, res, next) => {
       success: true,
       message: 'Provinces retrieved',
       data: provinces,
+      meta: {
+        page,
+        pageSize,
+        total,
+        totalPages: Math.max(Math.ceil(total / pageSize), 1),
+        sortBy,
+        sortOrder,
+        search: search || null,
+      },
     });
   } catch (err) {
     return next(err);
