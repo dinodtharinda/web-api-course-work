@@ -1,0 +1,30 @@
+name: Deploy to VPS
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Setup SSH
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.SSH_KEY }}" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          ssh-keyscan -H ${{ secrets.HOST }} >> ~/.ssh/known_hosts
+
+      - name: Deploy
+        run: |
+          ssh -i ~/.ssh/id_rsa root@${{ secrets.HOST }} "
+            export NVM_DIR=/root/.nvm &&
+            source \$NVM_DIR/nvm.sh &&
+            nvm use 24.14.1 &&
+            cd /var/www/dinod.retrologiclabs.com &&
+            git pull origin main &&
+            npm install &&
+            pm2 startOrReload ecosystem.config.cjs --update-env
+          "
