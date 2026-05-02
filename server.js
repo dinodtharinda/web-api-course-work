@@ -35,3 +35,4 @@ app.use(globalErrorHandler);
     process.exit(1);
   }
 })();
+
