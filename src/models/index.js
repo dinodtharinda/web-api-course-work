@@ -1,3 +1,4 @@
+require('dotenv').config({ override: true });
 const { Sequelize } = require('sequelize');
 const { ProvinceModel } = require('@/models/province.model');
 const { DistrictModel } = require('@/models/district.model');
