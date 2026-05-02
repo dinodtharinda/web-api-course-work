@@ -1,3 +1,5 @@
+require('dotenv').config({ override: true });
+
 module.exports = {
   development: {
     username: process.env.DB_USER || 'root',
