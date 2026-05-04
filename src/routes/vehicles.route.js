@@ -8,56 +8,73 @@ const { validateRegistrationNoParam } = require('@/middlewares/validate.middlewa
  * @swagger
  * /vehicles:
  *   get:
- *     summary: List all vehicles
- *     description: Retrieve a paginated list of all registered tuk-tuks
+ *     summary: 'List vehicles'
+ *     description: 'Paginated, includes district and tracking device.'
  *     tags:
- *       - Vehicles
+ *       - 'Vehicles'
  *     parameters:
- *       - name: page
- *         in: query
+ *       - name: 'page'
+ *         in: 'query'
+ *         required: false
+ *         description: 'Page number'
  *         schema:
- *           type: integer
+ *           type: 'integer'
  *           default: 1
- *       - name: limit
- *         in: query
+ *           minimum: 1
+ *       - name: 'pageSize'
+ *         in: 'query'
+ *         required: false
+ *         description: 'Items per page (max 100)'
  *         schema:
- *           type: integer
+ *           type: 'integer'
  *           default: 20
- *       - name: search
- *         in: query
- *         description: Search by registration number or owner name
+ *           minimum: 1
+ *       - name: 'search'
+ *         in: 'query'
+ *         required: false
+ *         description: 'Partial match on registration number or owner name'
  *         schema:
- *           type: string
+ *           type: 'string'
+ *       - name: 'sortBy'
+ *         in: 'query'
+ *         required: false
+ *         description: 'Sort field; unknown values fall back to the default'
+ *         schema:
+ *           type: 'string'
+ *           enum:
+ *             - 'registrationNo'
+ *             - 'ownerName'
+ *             - 'isActive'
+ *             - 'createdAt'
+ *             - 'updatedAt'
+ *       - name: 'sortOrder'
+ *         in: 'query'
+ *         required: false
+ *         description: 'Sort direction'
+ *         schema:
+ *           type: 'string'
+ *           enum:
+ *             - 'ASC'
+ *             - 'DESC'
  *     responses:
- *       200:
- *         description: Vehicles retrieved successfully
+ *       '200':
+ *         description: 'Vehicles retrieved'
  *         content:
  *           application/json:
  *             schema:
- *               type: object
+ *               type: 'object'
  *               properties:
  *                 success:
- *                   type: boolean
- *                 statusCode:
- *                   type: integer
+ *                   type: 'boolean'
+ *                   example: true
+ *                 message:
+ *                   type: 'string'
  *                 data:
- *                   type: object
- *                   properties:
- *                     vehicles:
- *                       type: array
- *                       items:
- *                         $ref: '#/components/schemas/Vehicle'
- *                     pagination:
- *                       type: object
- *                       properties:
- *                         total:
- *                           type: integer
- *                         page:
- *                           type: integer
- *                         limit:
- *                           type: integer
- *                         pages:
- *                           type: integer
+ *                   type: 'array'
+ *                   items:
+ *                     $ref: '#/components/schemas/Vehicle'
+ *                 meta:
+ *                   $ref: '#/components/schemas/ListMeta'
  */
 router.get('/', listVehicles);
 
@@ -65,105 +82,99 @@ router.get('/', listVehicles);
  * @swagger
  * /vehicles/{registrationNo}/pings:
  *   get:
- *     summary: List pings for a vehicle
- *     description: Retrieve location pings for a specific tuk-tuk
+ *     summary: 'List all pings for a vehicle'
+ *     description: 'Newest first. Not paginated.'
  *     tags:
- *       - Vehicles
+ *       - 'Vehicles'
  *     parameters:
- *       - name: registrationNo
- *         in: path
+ *       - name: 'registrationNo'
+ *         in: 'path'
  *         required: true
- *         description: Vehicle registration number
+ *         description: 'Vehicle registration number (case-insensitive, normalised to upper case)'
  *         schema:
- *           type: string
- *           example: NA-1234
- *       - name: page
- *         in: query
- *         schema:
- *           type: integer
- *           default: 1
- *       - name: limit
- *         in: query
- *         schema:
- *           type: integer
- *           default: 50
+ *           type: 'string'
+ *           example: 'NA-1234'
  *     responses:
- *       200:
- *         description: Vehicle pings retrieved successfully
+ *       '200':
+ *         description: 'Pings retrieved'
  *         content:
  *           application/json:
  *             schema:
- *               type: object
+ *               type: 'object'
  *               properties:
  *                 success:
- *                   type: boolean
- *                 statusCode:
- *                   type: integer
+ *                   type: 'boolean'
+ *                   example: true
+ *                 message:
+ *                   type: 'string'
  *                 data:
- *                   type: object
- *                   properties:
- *                     pings:
- *                       type: array
- *                       items:
- *                         $ref: '#/components/schemas/LocationPing'
- *                     pagination:
- *                       type: object
- *       404:
- *         description: Vehicle not found
+ *                   type: 'array'
+ *                   items:
+ *                     $ref: '#/components/schemas/VehiclePing'
+ *       '404':
+ *         description: 'Vehicle not found'
  *         content:
  *           application/json:
  *             schema:
  *               $ref: '#/components/schemas/ErrorResponse'
  */
-router.get('/:registrationNo/pings', listVehiclePings);
+router.get('/:registrationNo/pings', validateRegistrationNoParam, listVehiclePings);
 
 /**
  * @swagger
  * /vehicles:
  *   post:
- *     summary: Create a new vehicle
- *     description: Register a new tuk-tuk in the system (admin-only)
+ *     summary: 'Create a vehicle with its tracking device'
+ *     description: 'Currently public (no token required). `registrationNo` is upper-cased. A tracking device is created together with the vehicle.'
  *     tags:
- *       - Vehicles
+ *       - 'Vehicles'
  *     requestBody:
  *       required: true
  *       content:
  *         application/json:
  *           schema:
- *             type: object
- *             required:
- *               - registration_no
- *               - owner_name
- *               - owner_contact
+ *             type: 'object'
  *             properties:
- *               registration_no:
- *                 type: string
- *                 example: NA-1234
- *               owner_name:
- *                 type: string
- *                 example: John Doe
- *               owner_contact:
- *                 type: string
- *                 example: +94701234567
- *               description:
- *                 type: string
- *                 example: Yellow tuk-tuk with good condition
+ *               registrationNo:
+ *                 type: 'string'
+ *                 example: 'NA-1234'
+ *               ownerName:
+ *                 type: 'string'
+ *                 example: 'John Doe'
+ *               districtId:
+ *                 type: 'integer'
+ *                 example: 1
+ *               deviceSerial:
+ *                 type: 'string'
+ *                 example: 'DEV-0001'
+ *             required:
+ *               - 'registrationNo'
+ *               - 'ownerName'
+ *               - 'districtId'
+ *               - 'deviceSerial'
  *     responses:
- *       201:
- *         description: Vehicle created successfully
+ *       '201':
+ *         description: 'Vehicle created'
  *         content:
  *           application/json:
  *             schema:
- *               type: object
+ *               type: 'object'
  *               properties:
  *                 success:
- *                   type: boolean
- *                 statusCode:
- *                   type: integer
+ *                   type: 'boolean'
+ *                   example: true
+ *                 message:
+ *                   type: 'string'
  *                 data:
  *                   $ref: '#/components/schemas/Vehicle'
- *       400:
- *         description: Invalid vehicle data or duplicate registration
+ *       '409':
+ *         description: 'Duplicate value'
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ *       '422':
+ *         description: 'Validation failed'
  *         content:
  *           application/json:
  *             schema:
@@ -175,20 +186,45 @@ router.post('/', createVehicle);
  * @swagger
  * /vehicles/{registrationNo}:
  *   get:
- *     summary: Get a vehicle
+ *     summary: 'Get a vehicle'
+ *     description: 'Includes district and tracking device.'
  *     tags:
- *       - Vehicles
+ *       - 'Vehicles'
  *     parameters:
- *       - name: registrationNo
- *         in: path
+ *       - name: 'registrationNo'
+ *         in: 'path'
  *         required: true
+ *         description: 'Vehicle registration number (case-insensitive, normalised to upper case)'
  *         schema:
- *           type: string
+ *           type: 'string'
+ *           example: 'NA-1234'
  *     responses:
- *       200:
- *         description: Success
- *       404:
- *         description: Error
+ *       '200':
+ *         description: 'Vehicle retrieved'
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: 'object'
+ *               properties:
+ *                 success:
+ *                   type: 'boolean'
+ *                   example: true
+ *                 message:
+ *                   type: 'string'
+ *                 data:
+ *                   $ref: '#/components/schemas/Vehicle'
+ *       '404':
+ *         description: 'Vehicle not found'
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ *       '422':
+ *         description: 'Validation failed'
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
  */
 router.get('/:registrationNo', validateRegistrationNoParam, getVehicle);
 
@@ -196,37 +232,78 @@ router.get('/:registrationNo', validateRegistrationNoParam, getVehicle);
  * @swagger
  * /vehicles/{registrationNo}:
  *   patch:
- *     summary: Update a vehicle (admin-only)
+ *     summary: 'Update a vehicle'
+ *     description: 'Requires an admin bearer token. Send at least one field.'
  *     tags:
- *       - Vehicles
+ *       - 'Vehicles'
  *     security:
  *       - bearerAuth: []
  *     parameters:
- *       - name: registrationNo
- *         in: path
+ *       - name: 'registrationNo'
+ *         in: 'path'
  *         required: true
+ *         description: 'Vehicle registration number (case-insensitive, normalised to upper case)'
  *         schema:
- *           type: string
+ *           type: 'string'
+ *           example: 'NA-1234'
  *     requestBody:
  *       required: true
  *       content:
  *         application/json:
  *           schema:
- *             type: object
+ *             type: 'object'
  *             properties:
  *               ownerName:
- *                 type: string
+ *                 type: 'string'
  *               districtId:
- *                 type: integer
+ *                 type: 'integer'
  *               isActive:
- *                 type: boolean
+ *                 type: 'boolean'
  *     responses:
- *       200:
- *         description: Success
- *       404:
- *         description: Error
- *       422:
- *         description: Error
+ *       '200':
+ *         description: 'Vehicle updated'
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: 'object'
+ *               properties:
+ *                 success:
+ *                   type: 'boolean'
+ *                   example: true
+ *                 message:
+ *                   type: 'string'
+ *                 data:
+ *                   $ref: '#/components/schemas/Vehicle'
+ *       '400':
+ *         description: 'Bad request'
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ *       '401':
+ *         description: 'Missing, invalid or expired bearer token'
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ *       '403':
+ *         description: 'Authenticated user is not an admin'
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ *       '404':
+ *         description: 'Vehicle not found'
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ *       '422':
+ *         description: 'Validation failed'
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
  */
 router.patch('/:registrationNo', authenticate, authorizeRoles('admin'), validateRegistrationNoParam, updateVehicle);
 
@@ -234,22 +311,57 @@ router.patch('/:registrationNo', authenticate, authorizeRoles('admin'), validate
  * @swagger
  * /vehicles/{registrationNo}:
  *   delete:
- *     summary: Deactivate a vehicle (admin-only)
+ *     summary: 'Deactivate a vehicle'
+ *     description: 'Requires an admin bearer token. Soft delete: sets `isActive` to false.'
  *     tags:
- *       - Vehicles
+ *       - 'Vehicles'
  *     security:
  *       - bearerAuth: []
  *     parameters:
- *       - name: registrationNo
- *         in: path
+ *       - name: 'registrationNo'
+ *         in: 'path'
  *         required: true
+ *         description: 'Vehicle registration number (case-insensitive, normalised to upper case)'
  *         schema:
- *           type: string
+ *           type: 'string'
+ *           example: 'NA-1234'
  *     responses:
- *       200:
- *         description: Success
- *       404:
- *         description: Error
+ *       '200':
+ *         description: 'Vehicle deactivated'
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: 'object'
+ *               properties:
+ *                 success:
+ *                   type: 'boolean'
+ *                   example: true
+ *                 message:
+ *                   type: 'string'
+ *       '401':
+ *         description: 'Missing, invalid or expired bearer token'
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ *       '403':
+ *         description: 'Authenticated user is not an admin'
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ *       '404':
+ *         description: 'Vehicle not found'
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ *       '422':
+ *         description: 'Validation failed'
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
  */
 router.delete('/:registrationNo', authenticate, authorizeRoles('admin'), validateRegistrationNoParam, deleteVehicle);
 

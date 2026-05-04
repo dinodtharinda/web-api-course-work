@@ -12,59 +12,62 @@ const {
  * @swagger
  * /tracking/pings:
  *   post:
- *     summary: Ingest location ping
- *     description: Accept a new GPS location update from a tuk-tuk or tracking device
+ *     summary: 'Ingest a location ping'
+ *     description: 'Currently public (no token required).'
  *     tags:
- *       - Tracking & Location
+ *       - 'Tracking & Location'
  *     requestBody:
  *       required: true
  *       content:
  *         application/json:
  *           schema:
- *             type: object
- *             required:
- *               - registration_no
- *               - device_id
- *               - latitude
- *               - longitude
- *               - timestamp
+ *             type: 'object'
  *             properties:
- *               registration_no:
- *                 type: string
- *                 example: NA-1234
- *               device_id:
- *                 type: string
- *                 example: device-uuid-12345
+ *               registrationNo:
+ *                 type: 'string'
+ *                 example: 'NA-1234'
  *               latitude:
- *                 type: number
- *                 format: double
+ *                 type: 'number'
  *                 example: 6.9271
  *               longitude:
- *                 type: number
- *                 format: double
- *                 example: 80.7789
- *               accuracy:
- *                 type: number
- *                 example: 5.5
- *               speed:
- *                 type: number
- *                 example: 25.3
- *               heading:
- *                 type: number
- *                 example: 180.0
- *               timestamp:
- *                 type: string
- *                 format: date-time
- *                 example: 2025-05-02T10:30:00Z
+ *                 type: 'number'
+ *                 example: 79.8612
+ *               recordedAt:
+ *                 type: 'string'
+ *                 format: 'date-time'
+ *                 description: 'Defaults to now'
+ *                 example: '2025-05-02T10:30:00Z'
+ *               sourceType:
+ *                 type: 'string'
+ *                 default: 'device'
+ *                 example: 'device'
+ *             required:
+ *               - 'registrationNo'
+ *               - 'latitude'
+ *               - 'longitude'
  *     responses:
- *       201:
- *         description: Location ping ingested successfully
+ *       '201':
+ *         description: 'Ping ingested'
  *         content:
  *           application/json:
  *             schema:
- *               $ref: '#/components/schemas/SuccessResponse'
- *       400:
- *         description: Invalid ping data
+ *               type: 'object'
+ *               properties:
+ *                 success:
+ *                   type: 'boolean'
+ *                   example: true
+ *                 message:
+ *                   type: 'string'
+ *                 data:
+ *                   $ref: '#/components/schemas/LocationPing'
+ *       '404':
+ *         description: 'Vehicle not found'
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ *       '422':
+ *         description: 'Validation failed'
  *         content:
  *           application/json:
  *             schema:
@@ -76,42 +79,58 @@ router.post('/pings', validateTrackingPing, ingestLocationPing);
  * @swagger
  * /tracking/history:
  *   get:
- *     summary: Get filtered tracking history
- *     description: Retrieve location history with optional province and district filtering
+ *     summary: 'Get tracking history filtered by province or district'
+ *     description: 'At least one of `provinceId` or `districtId` is required. Not paginated, newest first.'
  *     tags:
- *       - Tracking & Location
+ *       - 'Tracking & Location'
  *     parameters:
- *       - name: province_id
- *         in: query
- *         description: Filter by province ID (optional)
+ *       - name: 'provinceId'
+ *         in: 'query'
+ *         required: false
+ *         description: 'Province ID'
  *         schema:
- *           type: integer
+ *           type: 'integer'
  *           example: 1
- *       - name: district_id
- *         in: query
- *         description: Filter by district ID (optional)
+ *       - name: 'districtId'
+ *         in: 'query'
+ *         required: false
+ *         description: 'District ID'
  *         schema:
- *           type: integer
+ *           type: 'integer'
  *           example: 1
- *       - name: page
- *         in: query
- *         schema:
- *           type: integer
- *           default: 1
- *       - name: limit
- *         in: query
- *         schema:
- *           type: integer
- *           default: 20
  *     responses:
- *       200:
- *         description: Filtered history retrieved successfully
+ *       '200':
+ *         description: 'History retrieved'
  *         content:
  *           application/json:
  *             schema:
- *               $ref: '#/components/schemas/SuccessResponse'
- *       400:
- *         description: Invalid filter parameters
+ *               type: 'object'
+ *               properties:
+ *                 success:
+ *                   type: 'boolean'
+ *                   example: true
+ *                 message:
+ *                   type: 'string'
+ *                 data:
+ *                   type: 'object'
+ *                   properties:
+ *                     filters:
+ *                       type: 'object'
+ *                       properties:
+ *                         provinceId:
+ *                           type: 'integer'
+ *                           nullable: true
+ *                         districtId:
+ *                           type: 'integer'
+ *                           nullable: true
+ *                     count:
+ *                       type: 'integer'
+ *                     history:
+ *                       type: 'array'
+ *                       items:
+ *                         $ref: '#/components/schemas/FilteredHistoryPing'
+ *       '422':
+ *         description: 'Validation failed'
  *         content:
  *           application/json:
  *             schema:
@@ -123,34 +142,41 @@ router.get('/history', validateProvinceDistrictFilterQuery, getFilteredHistory);
  * @swagger
  * /tracking/vehicles/{registrationNo}/latest:
  *   get:
- *     summary: Get latest location
- *     description: Retrieve the most recent location ping for a specific tuk-tuk
+ *     summary: 'Get latest location of a vehicle'
+ *     description: null
  *     tags:
- *       - Tracking & Location
+ *       - 'Tracking & Location'
  *     parameters:
- *       - name: registrationNo
- *         in: path
+ *       - name: 'registrationNo'
+ *         in: 'path'
  *         required: true
- *         description: Vehicle registration number
+ *         description: 'Vehicle registration number (case-insensitive, normalised to upper case)'
  *         schema:
- *           type: string
- *           example: NA-1234
+ *           type: 'string'
+ *           example: 'NA-1234'
  *     responses:
- *       200:
- *         description: Latest location retrieved successfully
+ *       '200':
+ *         description: 'Latest location'
  *         content:
  *           application/json:
  *             schema:
- *               type: object
+ *               type: 'object'
  *               properties:
  *                 success:
- *                   type: boolean
- *                 statusCode:
- *                   type: integer
+ *                   type: 'boolean'
+ *                   example: true
+ *                 message:
+ *                   type: 'string'
  *                 data:
- *                   $ref: '#/components/schemas/LocationPing'
- *       404:
- *         description: Vehicle or location not found
+ *                   $ref: '#/components/schemas/LatestLocation'
+ *       '404':
+ *         description: 'Vehicle not found, or it has no pings'
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ *       '422':
+ *         description: 'Validation failed'
  *         content:
  *           application/json:
  *             schema:
@@ -162,60 +188,74 @@ router.get('/vehicles/:registrationNo/latest', validateRegistrationNoParam, getL
  * @swagger
  * /tracking/vehicles/{registrationNo}/history:
  *   get:
- *     summary: Get movement history for a vehicle
- *     description: Retrieve location history for a specific tuk-tuk within a date range
+ *     summary: 'Get movement history of a vehicle'
+ *     description: '`from` and `to` are required. Oldest first. Not paginated.'
  *     tags:
- *       - Tracking & Location
+ *       - 'Tracking & Location'
  *     parameters:
- *       - name: registrationNo
- *         in: path
+ *       - name: 'registrationNo'
+ *         in: 'path'
  *         required: true
- *         description: Vehicle registration number
+ *         description: 'Vehicle registration number (case-insensitive, normalised to upper case)'
  *         schema:
- *           type: string
- *           example: NA-1234
- *       - name: start_date
- *         in: query
+ *           type: 'string'
+ *           example: 'NA-1234'
+ *       - name: 'from'
+ *         in: 'query'
  *         required: true
- *         description: Start date for history range
+ *         description: 'Range start (ISO 8601 date-time). Must be supplied together with `to`.'
  *         schema:
- *           type: string
- *           format: date
- *           example: 2025-04-25
- *       - name: end_date
- *         in: query
+ *           type: 'string'
+ *           example: '2025-04-25T00:00:00Z'
+ *           format: 'date-time'
+ *       - name: 'to'
+ *         in: 'query'
  *         required: true
- *         description: End date for history range
+ *         description: 'Range end (ISO 8601 date-time), must be >= `from`.'
  *         schema:
- *           type: string
- *           format: date
- *           example: 2025-05-02
- *       - name: page
- *         in: query
- *         schema:
- *           type: integer
- *           default: 1
- *       - name: limit
- *         in: query
- *         schema:
- *           type: integer
- *           default: 50
+ *           type: 'string'
+ *           example: '2025-05-02T23:59:59Z'
+ *           format: 'date-time'
  *     responses:
- *       200:
- *         description: Vehicle history retrieved successfully
+ *       '200':
+ *         description: 'History retrieved'
  *         content:
  *           application/json:
  *             schema:
- *               type: object
+ *               type: 'object'
  *               properties:
  *                 success:
- *                   type: boolean
- *                 statusCode:
- *                   type: integer
+ *                   type: 'boolean'
+ *                   example: true
+ *                 message:
+ *                   type: 'string'
  *                 data:
- *                   $ref: '#/components/schemas/TrackingHistory'
- *       404:
- *         description: Vehicle or data not found
+ *                   type: 'object'
+ *                   properties:
+ *                     vehicleId:
+ *                       type: 'integer'
+ *                     registrationNo:
+ *                       type: 'string'
+ *                     from:
+ *                       type: 'string'
+ *                       format: 'date-time'
+ *                     to:
+ *                       type: 'string'
+ *                       format: 'date-time'
+ *                     count:
+ *                       type: 'integer'
+ *                     history:
+ *                       type: 'array'
+ *                       items:
+ *                         $ref: '#/components/schemas/HistoryPing'
+ *       '404':
+ *         description: 'Vehicle not found'
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ *       '422':
+ *         description: 'Validation failed'
  *         content:
  *           application/json:
  *             schema:

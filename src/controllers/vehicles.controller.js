@@ -161,7 +161,20 @@ const deleteVehicle = async (req, res, next) => {
 
 const createVehicle = async (req, res, next) => {
   try {
-    const { registrationNo, ownerName, districtId, deviceSerial } = req.body;
+    const registrationNo = String(req.body.registrationNo || '').trim().toUpperCase();
+    const ownerName = String(req.body.ownerName || '').trim();
+    const deviceSerial = String(req.body.deviceSerial || '').trim();
+    const { districtId } = req.body;
+    const errors = {};
+
+    if (!registrationNo) errors.registrationNo = 'registrationNo is required';
+    if (!ownerName) errors.ownerName = 'ownerName is required';
+    if (!deviceSerial) errors.deviceSerial = 'deviceSerial is required';
+    if (!Number.isInteger(districtId) || districtId <= 0) errors.districtId = 'districtId must be a positive integer';
+
+    if (Object.keys(errors).length > 0) {
+      return res.status(422).json({ success: false, message: 'Validation failed', errors });
+    }
 
     const district = await District.findByPk(districtId);
 

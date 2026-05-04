@@ -7,43 +7,83 @@ const { authenticate, authorizeRoles } = require('@/middlewares/auth.middleware'
  * @swagger
  * /auth/register:
  *   post:
- *     summary: Register a new user
- *     description: Create a new user account. First user should be admin for system setup.
+ *     summary: 'Register a new user'
+ *     description: 'Public endpoint. `role` defaults to `viewer`. Email is lower-cased and must be unique.'
  *     tags:
- *       - Authentication
+ *       - 'Authentication'
  *     requestBody:
  *       required: true
  *       content:
  *         application/json:
  *           schema:
- *             type: object
- *             required:
- *               - email
- *               - password
- *               - role
+ *             type: 'object'
  *             properties:
+ *               firstName:
+ *                 type: 'string'
+ *                 example: 'Nimal'
+ *               lastName:
+ *                 type: 'string'
+ *                 example: 'Perera'
  *               email:
- *                 type: string
- *                 format: email
- *                 example: admin@slpolice.lk
+ *                 type: 'string'
+ *                 format: 'email'
+ *                 example: 'admin@slpolice.lk'
  *               password:
- *                 type: string
- *                 format: password
- *                 minLength: 8
- *                 example: SecurePassword123
+ *                 type: 'string'
+ *                 format: 'password'
+ *                 example: 'SecurePassword123'
  *               role:
- *                 type: string
- *                 enum: [admin, station_officer, device]
- *                 example: admin
+ *                 type: 'string'
+ *                 enum:
+ *                   - 'admin'
+ *                   - 'station'
+ *                   - 'viewer'
+ *                 default: 'viewer'
+ *             required:
+ *               - 'firstName'
+ *               - 'lastName'
+ *               - 'email'
+ *               - 'password'
  *     responses:
- *       201:
- *         description: User registered successfully
+ *       '201':
+ *         description: 'User registered'
  *         content:
  *           application/json:
  *             schema:
- *               $ref: '#/components/schemas/SuccessResponse'
- *       400:
- *         description: Invalid input or user already exists
+ *               type: 'object'
+ *               properties:
+ *                 success:
+ *                   type: 'boolean'
+ *                   example: true
+ *                 message:
+ *                   type: 'string'
+ *                   example: 'User registered'
+ *                 data:
+ *                   type: 'object'
+ *                   properties:
+ *                     id:
+ *                       type: 'integer'
+ *                     firstName:
+ *                       type: 'string'
+ *                     lastName:
+ *                       type: 'string'
+ *                     email:
+ *                       type: 'string'
+ *                       format: 'email'
+ *                     role:
+ *                       type: 'string'
+ *                       enum:
+ *                         - 'admin'
+ *                         - 'station'
+ *                         - 'viewer'
+ *       '400':
+ *         description: 'Bad request'
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ *       '409':
+ *         description: 'Email is already registered'
  *         content:
  *           application/json:
  *             schema:
@@ -55,50 +95,52 @@ router.post('/register', register);
  * @swagger
  * /auth/login:
  *   post:
- *     summary: Login user
- *     description: Authenticate user and receive JWT access token
+ *     summary: 'Login'
+ *     description: 'Returns a JWT access token. Deactivated users cannot log in.'
  *     tags:
- *       - Authentication
+ *       - 'Authentication'
  *     requestBody:
  *       required: true
  *       content:
  *         application/json:
  *           schema:
- *             type: object
- *             required:
- *               - email
- *               - password
+ *             type: 'object'
  *             properties:
  *               email:
- *                 type: string
- *                 format: email
- *                 example: admin@slpolice.lk
+ *                 type: 'string'
+ *                 format: 'email'
+ *                 example: 'admin@slpolice.lk'
  *               password:
- *                 type: string
- *                 format: password
- *                 example: SecurePassword123
+ *                 type: 'string'
+ *                 format: 'password'
+ *                 example: 'SecurePassword123'
+ *             required:
+ *               - 'email'
+ *               - 'password'
  *     responses:
- *       200:
- *         description: Login successful, access token provided
+ *       '200':
+ *         description: 'Login successful'
  *         content:
  *           application/json:
  *             schema:
- *               type: object
+ *               type: 'object'
  *               properties:
  *                 success:
- *                   type: boolean
- *                 statusCode:
- *                   type: integer
+ *                   type: 'boolean'
+ *                   example: true
+ *                 message:
+ *                   type: 'string'
+ *                   example: 'Login successful'
  *                 data:
- *                   type: object
- *                   properties:
- *                     access_token:
- *                       type: string
- *                       example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
- *                     user:
- *                       $ref: '#/components/schemas/User'
- *       401:
- *         description: Invalid credentials
+ *                   $ref: '#/components/schemas/AuthToken'
+ *       '400':
+ *         description: 'Bad request'
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ *       '401':
+ *         description: 'Invalid credentials'
  *         content:
  *           application/json:
  *             schema:
@@ -110,28 +152,35 @@ router.post('/login', login);
  * @swagger
  * /auth/me:
  *   get:
- *     summary: Get current user profile
- *     description: Retrieve the profile of the authenticated user
+ *     summary: 'Get current user profile'
+ *     description: 'Returns the profile of the token owner.'
  *     tags:
- *       - Authentication
+ *       - 'Authentication'
  *     security:
  *       - bearerAuth: []
  *     responses:
- *       200:
- *         description: User profile retrieved successfully
+ *       '200':
+ *         description: 'Profile'
  *         content:
  *           application/json:
  *             schema:
- *               type: object
+ *               type: 'object'
  *               properties:
  *                 success:
- *                   type: boolean
- *                 statusCode:
- *                   type: integer
+ *                   type: 'boolean'
+ *                   example: true
+ *                 message:
+ *                   type: 'string'
  *                 data:
  *                   $ref: '#/components/schemas/User'
- *       401:
- *         description: Unauthorized - missing or invalid token
+ *       '401':
+ *         description: 'Missing, invalid or expired bearer token'
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ *       '404':
+ *         description: 'User not found'
  *         content:
  *           application/json:
  *             schema:
@@ -143,28 +192,33 @@ router.get('/me', authenticate, me);
  * @swagger
  * /auth/admin-check:
  *   get:
- *     summary: Verify admin access
- *     description: Check if the current user has admin role (admin-only endpoint)
+ *     summary: 'Verify admin access'
+ *     description: 'Succeeds only for admin tokens.'
  *     tags:
- *       - Authentication
+ *       - 'Authentication'
  *     security:
  *       - bearerAuth: []
  *     responses:
- *       200:
- *         description: Admin access confirmed
+ *       '200':
+ *         description: 'Admin access granted'
  *         content:
  *           application/json:
  *             schema:
- *               type: object
+ *               type: 'object'
  *               properties:
  *                 success:
- *                   type: boolean
- *                 statusCode:
- *                   type: integer
+ *                   type: 'boolean'
+ *                   example: true
  *                 message:
- *                   type: string
- *       403:
- *         description: Forbidden - insufficient permissions
+ *                   type: 'string'
+ *       '401':
+ *         description: 'Missing, invalid or expired bearer token'
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ *       '403':
+ *         description: 'Authenticated user is not an admin'
  *         content:
  *           application/json:
  *             schema:
@@ -176,16 +230,33 @@ router.get('/admin-check', authenticate, authorizeRoles('admin'), adminGuardChec
  * @swagger
  * /auth/refresh:
  *   post:
- *     summary: Issue a new access token for the current valid token
+ *     summary: 'Refresh access token'
+ *     description: 'Exchanges a still-valid access token for a new one. There are no separate refresh tokens.'
  *     tags:
- *       - Authentication
+ *       - 'Authentication'
  *     security:
  *       - bearerAuth: []
  *     responses:
- *       200:
- *         description: Success
- *       401:
- *         description: Error
+ *       '200':
+ *         description: 'New token issued'
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: 'object'
+ *               properties:
+ *                 success:
+ *                   type: 'boolean'
+ *                   example: true
+ *                 message:
+ *                   type: 'string'
+ *                 data:
+ *                   $ref: '#/components/schemas/AuthToken'
+ *       '401':
+ *         description: 'Missing, invalid or expired bearer token'
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
  */
 router.post('/refresh', authenticate, refreshToken);
 
@@ -193,16 +264,31 @@ router.post('/refresh', authenticate, refreshToken);
  * @swagger
  * /auth/logout:
  *   post:
- *     summary: Logout (client discards the stateless token)
+ *     summary: 'Logout'
+ *     description: 'Tokens are stateless JWTs, so this only acknowledges the request; the client must discard the token.'
  *     tags:
- *       - Authentication
+ *       - 'Authentication'
  *     security:
  *       - bearerAuth: []
  *     responses:
- *       200:
- *         description: Success
- *       401:
- *         description: Error
+ *       '200':
+ *         description: 'Logged out'
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: 'object'
+ *               properties:
+ *                 success:
+ *                   type: 'boolean'
+ *                   example: true
+ *                 message:
+ *                   type: 'string'
+ *       '401':
+ *         description: 'Missing, invalid or expired bearer token'
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
  */
 router.post('/logout', authenticate, logout);
 
@@ -210,9 +296,10 @@ router.post('/logout', authenticate, logout);
  * @swagger
  * /auth/change-password:
  *   post:
- *     summary: Change the current user password
+ *     summary: 'Change password'
+ *     description: 'Changes the password of the token owner.'
  *     tags:
- *       - Authentication
+ *       - 'Authentication'
  *     security:
  *       - bearerAuth: []
  *     requestBody:
@@ -220,19 +307,55 @@ router.post('/logout', authenticate, logout);
  *       content:
  *         application/json:
  *           schema:
- *             type: object
+ *             type: 'object'
  *             properties:
  *               currentPassword:
- *                 type: string
+ *                 type: 'string'
+ *                 format: 'password'
  *               newPassword:
- *                 type: string
+ *                 type: 'string'
+ *                 format: 'password'
+ *                 minLength: 8
+ *             required:
+ *               - 'currentPassword'
+ *               - 'newPassword'
  *     responses:
- *       200:
- *         description: Success
- *       401:
- *         description: Error
- *       422:
- *         description: Error
+ *       '200':
+ *         description: 'Password changed'
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: 'object'
+ *               properties:
+ *                 success:
+ *                   type: 'boolean'
+ *                   example: true
+ *                 message:
+ *                   type: 'string'
+ *       '400':
+ *         description: 'Bad request'
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ *       '401':
+ *         description: 'Missing token or current password is incorrect'
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ *       '404':
+ *         description: 'User not found'
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ *       '422':
+ *         description: 'Validation failed'
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
  */
 router.post('/change-password', authenticate, changePassword);
 

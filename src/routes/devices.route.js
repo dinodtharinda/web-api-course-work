@@ -10,45 +10,92 @@ router.use(authenticate, authorizeRoles('admin'));
  * @swagger
  * /devices:
  *   get:
- *     summary: List tracking devices (admin-only)
+ *     summary: 'List tracking devices'
+ *     description: 'Requires an admin bearer token. Paginated.'
  *     tags:
- *       - Tracking Devices
+ *       - 'Tracking Devices'
  *     security:
  *       - bearerAuth: []
  *     parameters:
- *       - name: page
- *         in: query
+ *       - name: 'page'
+ *         in: 'query'
  *         required: false
+ *         description: 'Page number'
  *         schema:
- *           type: integer
- *       - name: pageSize
- *         in: query
+ *           type: 'integer'
+ *           default: 1
+ *           minimum: 1
+ *       - name: 'pageSize'
+ *         in: 'query'
  *         required: false
+ *         description: 'Items per page (max 100)'
  *         schema:
- *           type: integer
- *       - name: search
- *         in: query
+ *           type: 'integer'
+ *           default: 20
+ *           minimum: 1
+ *       - name: 'search'
+ *         in: 'query'
  *         required: false
+ *         description: 'Partial match on device serial'
  *         schema:
- *           type: string
- *       - name: sortBy
- *         in: query
+ *           type: 'string'
+ *       - name: 'sortBy'
+ *         in: 'query'
  *         required: false
+ *         description: 'Sort field; unknown values fall back to the default'
  *         schema:
- *           type: string
- *       - name: sortOrder
- *         in: query
+ *           type: 'string'
+ *           enum:
+ *             - 'deviceSerial'
+ *             - 'isActive'
+ *             - 'createdAt'
+ *             - 'updatedAt'
+ *       - name: 'sortOrder'
+ *         in: 'query'
  *         required: false
+ *         description: 'Sort direction'
  *         schema:
- *           type: string
- *       - name: isActive
- *         in: query
+ *           type: 'string'
+ *           enum:
+ *             - 'ASC'
+ *             - 'DESC'
+ *       - name: 'isActive'
+ *         in: 'query'
  *         required: false
+ *         description: 'Filter by active state'
  *         schema:
- *           type: boolean
+ *           type: 'boolean'
  *     responses:
- *       200:
- *         description: Success
+ *       '200':
+ *         description: 'Devices retrieved'
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: 'object'
+ *               properties:
+ *                 success:
+ *                   type: 'boolean'
+ *                   example: true
+ *                 message:
+ *                   type: 'string'
+ *                 data:
+ *                   type: 'array'
+ *                   items:
+ *                     $ref: '#/components/schemas/TrackingDevice'
+ *                 meta:
+ *                   $ref: '#/components/schemas/ListMeta'
+ *       '401':
+ *         description: 'Missing, invalid or expired bearer token'
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ *       '403':
+ *         description: 'Authenticated user is not an admin'
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
  */
 router.get('/', listDevices);
 
@@ -56,9 +103,10 @@ router.get('/', listDevices);
  * @swagger
  * /devices:
  *   post:
- *     summary: Register a tracking device for a vehicle (admin-only)
+ *     summary: 'Register a tracking device for a vehicle'
+ *     description: 'Requires an admin bearer token. A vehicle can have only one device.'
  *     tags:
- *       - Tracking Devices
+ *       - 'Tracking Devices'
  *     security:
  *       - bearerAuth: []
  *     requestBody:
@@ -66,21 +114,62 @@ router.get('/', listDevices);
  *       content:
  *         application/json:
  *           schema:
- *             type: object
+ *             type: 'object'
  *             properties:
  *               deviceSerial:
- *                 type: string
+ *                 type: 'string'
+ *                 example: 'DEV-0002'
  *               registrationNo:
- *                 type: string
+ *                 type: 'string'
+ *                 example: 'NA-1234'
+ *             required:
+ *               - 'deviceSerial'
+ *               - 'registrationNo'
  *     responses:
- *       201:
- *         description: Success
- *       404:
- *         description: Error
- *       409:
- *         description: Error
- *       422:
- *         description: Error
+ *       '201':
+ *         description: 'Device created'
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: 'object'
+ *               properties:
+ *                 success:
+ *                   type: 'boolean'
+ *                   example: true
+ *                 message:
+ *                   type: 'string'
+ *                 data:
+ *                   $ref: '#/components/schemas/TrackingDevice'
+ *       '401':
+ *         description: 'Missing, invalid or expired bearer token'
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ *       '403':
+ *         description: 'Authenticated user is not an admin'
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ *       '404':
+ *         description: 'Vehicle not found'
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ *       '409':
+ *         description: 'Vehicle already has a device, or serial already used'
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ *       '422':
+ *         description: 'Validation failed'
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
  */
 router.post('/', createDevice);
 
@@ -88,22 +177,53 @@ router.post('/', createDevice);
  * @swagger
  * /devices/{deviceSerial}:
  *   get:
- *     summary: Get a tracking device (admin-only)
+ *     summary: 'Get a tracking device'
+ *     description: 'Requires an admin bearer token. '
  *     tags:
- *       - Tracking Devices
+ *       - 'Tracking Devices'
  *     security:
  *       - bearerAuth: []
  *     parameters:
- *       - name: deviceSerial
- *         in: path
+ *       - name: 'deviceSerial'
+ *         in: 'path'
  *         required: true
+ *         description: 'Tracking device serial'
  *         schema:
- *           type: string
+ *           type: 'string'
+ *           example: 'DEV-0001'
  *     responses:
- *       200:
- *         description: Success
- *       404:
- *         description: Error
+ *       '200':
+ *         description: 'Device retrieved'
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: 'object'
+ *               properties:
+ *                 success:
+ *                   type: 'boolean'
+ *                   example: true
+ *                 message:
+ *                   type: 'string'
+ *                 data:
+ *                   $ref: '#/components/schemas/TrackingDevice'
+ *       '401':
+ *         description: 'Missing, invalid or expired bearer token'
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ *       '403':
+ *         description: 'Authenticated user is not an admin'
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ *       '404':
+ *         description: 'Tracking device not found'
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
  */
 router.get('/:deviceSerial', validateDeviceSerialParam, getDevice);
 
@@ -111,35 +231,82 @@ router.get('/:deviceSerial', validateDeviceSerialParam, getDevice);
  * @swagger
  * /devices/{deviceSerial}:
  *   patch:
- *     summary: Update a tracking device (admin-only)
+ *     summary: 'Update a tracking device'
+ *     description: 'Requires an admin bearer token. Send at least one field.'
  *     tags:
- *       - Tracking Devices
+ *       - 'Tracking Devices'
  *     security:
  *       - bearerAuth: []
  *     parameters:
- *       - name: deviceSerial
- *         in: path
+ *       - name: 'deviceSerial'
+ *         in: 'path'
  *         required: true
+ *         description: 'Tracking device serial'
  *         schema:
- *           type: string
+ *           type: 'string'
+ *           example: 'DEV-0001'
  *     requestBody:
  *       required: true
  *       content:
  *         application/json:
  *           schema:
- *             type: object
+ *             type: 'object'
  *             properties:
  *               deviceSerial:
- *                 type: string
+ *                 type: 'string'
  *               isActive:
- *                 type: boolean
+ *                 type: 'boolean'
  *     responses:
- *       200:
- *         description: Success
- *       404:
- *         description: Error
- *       422:
- *         description: Error
+ *       '200':
+ *         description: 'Device updated'
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: 'object'
+ *               properties:
+ *                 success:
+ *                   type: 'boolean'
+ *                   example: true
+ *                 message:
+ *                   type: 'string'
+ *                 data:
+ *                   $ref: '#/components/schemas/TrackingDevice'
+ *       '400':
+ *         description: 'Bad request'
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ *       '401':
+ *         description: 'Missing, invalid or expired bearer token'
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ *       '403':
+ *         description: 'Authenticated user is not an admin'
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ *       '404':
+ *         description: 'Tracking device not found'
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ *       '409':
+ *         description: 'Duplicate value'
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ *       '422':
+ *         description: 'Validation failed'
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
  */
 router.patch('/:deviceSerial', validateDeviceSerialParam, updateDevice);
 
@@ -147,22 +314,51 @@ router.patch('/:deviceSerial', validateDeviceSerialParam, updateDevice);
  * @swagger
  * /devices/{deviceSerial}:
  *   delete:
- *     summary: Delete a tracking device (admin-only)
+ *     summary: 'Delete a tracking device'
+ *     description: 'Requires an admin bearer token. Permanent delete.'
  *     tags:
- *       - Tracking Devices
+ *       - 'Tracking Devices'
  *     security:
  *       - bearerAuth: []
  *     parameters:
- *       - name: deviceSerial
- *         in: path
+ *       - name: 'deviceSerial'
+ *         in: 'path'
  *         required: true
+ *         description: 'Tracking device serial'
  *         schema:
- *           type: string
+ *           type: 'string'
+ *           example: 'DEV-0001'
  *     responses:
- *       200:
- *         description: Success
- *       404:
- *         description: Error
+ *       '200':
+ *         description: 'Device deleted'
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: 'object'
+ *               properties:
+ *                 success:
+ *                   type: 'boolean'
+ *                   example: true
+ *                 message:
+ *                   type: 'string'
+ *       '401':
+ *         description: 'Missing, invalid or expired bearer token'
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ *       '403':
+ *         description: 'Authenticated user is not an admin'
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ *       '404':
+ *         description: 'Tracking device not found'
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
  */
 router.delete('/:deviceSerial', validateDeviceSerialParam, deleteDevice);
 

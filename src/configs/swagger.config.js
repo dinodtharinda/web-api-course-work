@@ -32,92 +32,481 @@ const options = {
         },
       },
       schemas: {
-        SuccessResponse: {
-          type: 'object',
-          properties: {
-            success: { type: 'boolean', example: true },
-            statusCode: { type: 'integer', example: 200 },
-            data: { type: 'object' },
-            message: { type: 'string' },
-          },
-        },
         ErrorResponse: {
-          type: 'object',
-          properties: {
-            success: { type: 'boolean', example: false },
-            statusCode: { type: 'integer', example: 400 },
-            error: { type: 'string' },
-            message: { type: 'string' },
-          },
+          "type": "object",
+          "properties": {
+            "success": {
+              "type": "boolean",
+              "example": false
+            },
+            "message": {
+              "type": "string"
+            },
+            "errors": {
+              "type": "object",
+              "additionalProperties": true
+            },
+            "meta": {
+              "type": "object",
+              "properties": {
+                "path": {
+                  "type": "string"
+                },
+                "method": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        },
+        ListMeta: {
+          "type": "object",
+          "properties": {
+            "page": {
+              "type": "integer"
+            },
+            "pageSize": {
+              "type": "integer"
+            },
+            "total": {
+              "type": "integer"
+            },
+            "totalPages": {
+              "type": "integer"
+            },
+            "sortBy": {
+              "type": "string"
+            },
+            "sortOrder": {
+              "type": "string",
+              "enum": [
+                "ASC",
+                "DESC"
+              ]
+            },
+            "search": {
+              "type": "string",
+              "nullable": true
+            }
+          }
+        },
+        AuthToken: {
+          "type": "object",
+          "properties": {
+            "accessToken": {
+              "type": "string",
+              "example": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+            },
+            "tokenType": {
+              "type": "string",
+              "example": "Bearer"
+            },
+            "expiresIn": {
+              "type": "string",
+              "example": "1h"
+            }
+          }
         },
         User: {
-          type: 'object',
-          properties: {
-            id: { type: 'integer' },
-            email: { type: 'string', format: 'email' },
-            role: { type: 'string', enum: ['admin', 'station_officer', 'device'] },
-            createdAt: { type: 'string', format: 'date-time' },
-            updatedAt: { type: 'string', format: 'date-time' },
-          },
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "integer"
+            },
+            "firstName": {
+              "type": "string"
+            },
+            "lastName": {
+              "type": "string"
+            },
+            "email": {
+              "type": "string",
+              "format": "email"
+            },
+            "role": {
+              "type": "string",
+              "enum": [
+                "admin",
+                "station",
+                "viewer"
+              ]
+            },
+            "isActive": {
+              "type": "boolean"
+            },
+            "createdAt": {
+              "type": "string",
+              "format": "date-time"
+            },
+            "updatedAt": {
+              "type": "string",
+              "format": "date-time"
+            }
+          }
         },
         Province: {
-          type: 'object',
-          properties: {
-            id: { type: 'integer' },
-            name: { type: 'string' },
-          },
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "integer"
+            },
+            "name": {
+              "type": "string"
+            },
+            "code": {
+              "type": "string"
+            },
+            "districts": {
+              "type": "array",
+              "items": {
+                "$ref": "#/components/schemas/District"
+              }
+            },
+            "createdAt": {
+              "type": "string",
+              "format": "date-time"
+            },
+            "updatedAt": {
+              "type": "string",
+              "format": "date-time"
+            }
+          }
         },
         District: {
-          type: 'object',
-          properties: {
-            id: { type: 'integer' },
-            name: { type: 'string' },
-            province_id: { type: 'integer' },
-          },
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "integer"
+            },
+            "provinceId": {
+              "type": "integer"
+            },
+            "name": {
+              "type": "string"
+            },
+            "code": {
+              "type": "string"
+            },
+            "createdAt": {
+              "type": "string",
+              "format": "date-time"
+            },
+            "updatedAt": {
+              "type": "string",
+              "format": "date-time"
+            }
+          }
         },
         PoliceStation: {
-          type: 'object',
-          properties: {
-            id: { type: 'integer' },
-            name: { type: 'string' },
-            code: { type: 'string' },
-            district_id: { type: 'integer' },
-          },
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "integer"
+            },
+            "districtId": {
+              "type": "integer"
+            },
+            "name": {
+              "type": "string"
+            },
+            "code": {
+              "type": "string"
+            },
+            "district": {
+              "$ref": "#/components/schemas/District"
+            },
+            "createdAt": {
+              "type": "string",
+              "format": "date-time"
+            },
+            "updatedAt": {
+              "type": "string",
+              "format": "date-time"
+            }
+          }
+        },
+        TrackingDevice: {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "integer"
+            },
+            "vehicleId": {
+              "type": "integer"
+            },
+            "deviceSerial": {
+              "type": "string"
+            },
+            "isActive": {
+              "type": "boolean"
+            },
+            "vehicle": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "integer"
+                },
+                "registrationNo": {
+                  "type": "string"
+                },
+                "ownerName": {
+                  "type": "string"
+                },
+                "districtId": {
+                  "type": "integer"
+                },
+                "isActive": {
+                  "type": "boolean"
+                }
+              }
+            },
+            "createdAt": {
+              "type": "string",
+              "format": "date-time"
+            },
+            "updatedAt": {
+              "type": "string",
+              "format": "date-time"
+            }
+          }
         },
         Vehicle: {
-          type: 'object',
-          properties: {
-            registration_no: { type: 'string' },
-            owner_name: { type: 'string' },
-            owner_contact: { type: 'string' },
-            description: { type: 'string' },
-          },
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "integer"
+            },
+            "registrationNo": {
+              "type": "string"
+            },
+            "ownerName": {
+              "type": "string"
+            },
+            "districtId": {
+              "type": "integer"
+            },
+            "isActive": {
+              "type": "boolean"
+            },
+            "district": {
+              "$ref": "#/components/schemas/District"
+            },
+            "trackingDevice": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "integer"
+                },
+                "deviceSerial": {
+                  "type": "string"
+                },
+                "isActive": {
+                  "type": "boolean"
+                },
+                "createdAt": {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                "updatedAt": {
+                  "type": "string",
+                  "format": "date-time"
+                }
+              }
+            },
+            "createdAt": {
+              "type": "string",
+              "format": "date-time"
+            },
+            "updatedAt": {
+              "type": "string",
+              "format": "date-time"
+            }
+          }
         },
         LocationPing: {
-          type: 'object',
-          properties: {
-            id: { type: 'integer' },
-            registration_no: { type: 'string' },
-            device_id: { type: 'string' },
-            latitude: { type: 'number', format: 'double' },
-            longitude: { type: 'number', format: 'double' },
-            accuracy: { type: 'number' },
-            speed: { type: 'number' },
-            heading: { type: 'number' },
-            timestamp: { type: 'string', format: 'date-time' },
-            createdAt: { type: 'string', format: 'date-time' },
-          },
-        },
-        TrackingHistory: {
-          type: 'object',
-          properties: {
-            registration_no: { type: 'string' },
-            total_pings: { type: 'integer' },
-            pings: {
-              type: 'array',
-              items: { $ref: '#/components/schemas/LocationPing' },
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "integer"
             },
-          },
+            "vehicleId": {
+              "type": "integer"
+            },
+            "latitude": {
+              "type": "number"
+            },
+            "longitude": {
+              "type": "number"
+            },
+            "recordedAt": {
+              "type": "string",
+              "format": "date-time"
+            },
+            "sourceType": {
+              "type": "string"
+            },
+            "createdAt": {
+              "type": "string",
+              "format": "date-time"
+            },
+            "updatedAt": {
+              "type": "string",
+              "format": "date-time"
+            }
+          }
+        },
+        LatestLocation: {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "integer"
+            },
+            "vehicleId": {
+              "type": "integer"
+            },
+            "registrationNo": {
+              "type": "string"
+            },
+            "latitude": {
+              "type": "number"
+            },
+            "longitude": {
+              "type": "number"
+            },
+            "recordedAt": {
+              "type": "string",
+              "format": "date-time"
+            },
+            "sourceType": {
+              "type": "string"
+            },
+            "createdAt": {
+              "type": "string",
+              "format": "date-time"
+            },
+            "updatedAt": {
+              "type": "string",
+              "format": "date-time"
+            }
+          }
+        },
+        HistoryPing: {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "integer"
+            },
+            "latitude": {
+              "type": "number"
+            },
+            "longitude": {
+              "type": "number"
+            },
+            "recordedAt": {
+              "type": "string",
+              "format": "date-time"
+            },
+            "sourceType": {
+              "type": "string"
+            },
+            "createdAt": {
+              "type": "string",
+              "format": "date-time"
+            },
+            "updatedAt": {
+              "type": "string",
+              "format": "date-time"
+            }
+          }
+        },
+        VehiclePing: {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "integer"
+            },
+            "latitude": {
+              "type": "number"
+            },
+            "longitude": {
+              "type": "number"
+            },
+            "timestamp": {
+              "type": "string",
+              "format": "date-time"
+            },
+            "sourceType": {
+              "type": "string"
+            },
+            "createdAt": {
+              "type": "string",
+              "format": "date-time"
+            },
+            "updatedAt": {
+              "type": "string",
+              "format": "date-time"
+            }
+          }
+        },
+        StationHistoryPing: {
+          "allOf": [
+            {
+              "$ref": "#/components/schemas/HistoryPing"
+            },
+            {
+              "type": "object",
+              "properties": {
+                "vehicle": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "integer"
+                    },
+                    "registrationNo": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          ]
+        },
+        FilteredHistoryPing: {
+          "allOf": [
+            {
+              "$ref": "#/components/schemas/HistoryPing"
+            },
+            {
+              "type": "object",
+              "properties": {
+                "vehicle": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "integer"
+                    },
+                    "registrationNo": {
+                      "type": "string"
+                    }
+                  }
+                },
+                "district": {
+                  "$ref": "#/components/schemas/District"
+                },
+                "province": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "integer"
+                    },
+                    "name": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          ]
         },
       },
     },
