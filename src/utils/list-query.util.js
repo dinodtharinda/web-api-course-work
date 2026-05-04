@@ -25,6 +25,17 @@ const parseListQuery = (query, options = {}) => {
   };
 };
 
+const buildListMeta = ({ page, pageSize, sortBy, sortOrder, search }, total) => ({
+  page,
+  pageSize,
+  total,
+  totalPages: Math.max(Math.ceil(total / pageSize), 1),
+  sortBy,
+  sortOrder,
+  search: search || null,
+});
+
 module.exports = {
   parseListQuery,
+  buildListMeta,
 };

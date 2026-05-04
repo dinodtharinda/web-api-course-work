@@ -1,6 +1,6 @@
 const { Op } = require('sequelize');
-const { PoliceStation, District, Vehicle, LocationPing, Province } = require('@/models');
-const { parseListQuery } = require('@/utils/list-query.util');
+const { PoliceStation, District, Vehicle, LocationPing, Province, TrackingDevice } = require('@/models');
+const { parseListQuery, buildListMeta } = require('@/utils/list-query.util');
 
 const listStations = async (req, res, next) => {
   try {
@@ -44,6 +44,176 @@ const listStations = async (req, res, next) => {
         sortOrder,
         search: search || null,
       },
+    });
+  } catch (err) {
+    return next(err);
+  }
+};
+
+const stationInclude = [
+  {
+    model: District,
+    as: 'district',
+    attributes: ['id', 'name', 'code', 'provinceId', 'createdAt', 'updatedAt'],
+    required: true,
+  },
+];
+
+const getStation = async (req, res, next) => {
+  try {
+    const station = await PoliceStation.findByPk(req.params.stationId, { include: stationInclude });
+
+    if (!station) {
+      return res.status(404).json({ success: false, message: 'Police station not found' });
+    }
+
+    return res.status(200).json({ success: true, message: 'Police station retrieved', data: station });
+  } catch (err) {
+    return next(err);
+  }
+};
+
+const createStation = async (req, res, next) => {
+  try {
+    const name = String(req.body.name || '').trim();
+    const code = String(req.body.code || '').trim().toUpperCase();
+    const { districtId } = req.body;
+    const errors = {};
+
+    if (!name) errors.name = 'name is required';
+    if (!code) errors.code = 'code is required';
+    if (!Number.isInteger(districtId) || districtId <= 0) errors.districtId = 'districtId must be a positive integer';
+
+    if (Object.keys(errors).length > 0) {
+      return res.status(422).json({ success: false, message: 'Validation failed', errors });
+    }
+
+    if (!(await District.findByPk(districtId))) {
+      return res.status(422).json({ success: false, message: 'Invalid districtId' });
+    }
+
+    const station = await PoliceStation.create({ name, code, districtId });
+
+    return res.status(201).json({
+      success: true,
+      message: 'Police station created',
+      data: await PoliceStation.findByPk(station.id, { include: stationInclude }),
+    });
+  } catch (err) {
+    return next(err);
+  }
+};
+
+const updateStation = async (req, res, next) => {
+  try {
+    const station = await PoliceStation.findByPk(req.params.stationId);
+
+    if (!station) {
+      return res.status(404).json({ success: false, message: 'Police station not found' });
+    }
+
+    const updates = {};
+    const { name, code, districtId } = req.body;
+
+    if (name !== undefined) {
+      if (!String(name).trim()) {
+        return res.status(422).json({ success: false, message: 'name must not be empty' });
+      }
+      updates.name = String(name).trim();
+    }
+
+    if (code !== undefined) {
+      if (!String(code).trim()) {
+        return res.status(422).json({ success: false, message: 'code must not be empty' });
+      }
+      updates.code = String(code).trim().toUpperCase();
+    }
+
+    if (districtId !== undefined) {
+      if (!(await District.findByPk(districtId))) {
+        return res.status(422).json({ success: false, message: 'Invalid districtId' });
+      }
+      updates.districtId = districtId;
+    }
+
+    if (Object.keys(updates).length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'Provide at least one of name, code, districtId',
+      });
+    }
+
+    await station.update(updates);
+
+    return res.status(200).json({
+      success: true,
+      message: 'Police station updated',
+      data: await PoliceStation.findByPk(station.id, { include: stationInclude }),
+    });
+  } catch (err) {
+    return next(err);
+  }
+};
+
+const deleteStation = async (req, res, next) => {
+  try {
+    const station = await PoliceStation.findByPk(req.params.stationId);
+
+    if (!station) {
+      return res.status(404).json({ success: false, message: 'Police station not found' });
+    }
+
+    await station.destroy();
+
+    return res.status(200).json({ success: true, message: 'Police station deleted' });
+  } catch (err) {
+    return next(err);
+  }
+};
+
+const listStationVehicles = async (req, res, next) => {
+  try {
+    const station = await PoliceStation.findByPk(req.params.stationId);
+
+    if (!station) {
+      return res.status(404).json({ success: false, message: 'Police station not found' });
+    }
+
+    const query = parseListQuery(req.query, {
+      defaultSortBy: 'registrationNo',
+      defaultSortOrder: 'ASC',
+      allowedSortBy: ['registrationNo', 'ownerName', 'isActive', 'createdAt', 'updatedAt'],
+    });
+
+    const where = { districtId: station.districtId };
+
+    if (query.search) {
+      where[Op.or] = [
+        { registrationNo: { [Op.like]: `%${query.search}%` } },
+        { ownerName: { [Op.like]: `%${query.search}%` } },
+      ];
+    }
+
+    const { rows, count } = await Vehicle.findAndCountAll({
+      where,
+      include: [
+        {
+          model: TrackingDevice,
+          as: 'trackingDevice',
+          attributes: ['id', 'deviceSerial', 'isActive', 'createdAt', 'updatedAt'],
+          required: false,
+        },
+      ],
+      order: [[query.sortBy, query.sortOrder]],
+      limit: query.limit,
+      offset: query.offset,
+    });
+
+    return res.status(200).json({
+      success: true,
+      message: 'Station vehicles retrieved',
+      data: rows,
+      meta: buildListMeta(query, count),
     });
   } catch (err) {
     return next(err);
@@ -185,5 +355,10 @@ const getStationTrackingHistory = async (req, res, next) => {
 
 module.exports = {
   listStations,
+  getStation,
+  createStation,
+  updateStation,
+  deleteStation,
+  listStationVehicles,
   getStationTrackingHistory,
 };

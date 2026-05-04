@@ -1,6 +1,8 @@
 const router = require('express').Router();
 
-const { createVehicle, listVehicles, listVehiclePings } = require('@/controllers/vehicles.controller');
+const { createVehicle, getVehicle, updateVehicle, deleteVehicle, listVehicles, listVehiclePings } = require('@/controllers/vehicles.controller');
+const { authenticate, authorizeRoles } = require('@/middlewares/auth.middleware');
+const { validateRegistrationNoParam } = require('@/middlewares/validate.middleware');
 
 /**
  * @swagger
@@ -168,5 +170,87 @@ router.get('/:registrationNo/pings', listVehiclePings);
  *               $ref: '#/components/schemas/ErrorResponse'
  */
 router.post('/', createVehicle);
+
+/**
+ * @swagger
+ * /vehicles/{registrationNo}:
+ *   get:
+ *     summary: Get a vehicle
+ *     tags:
+ *       - Vehicles
+ *     parameters:
+ *       - name: registrationNo
+ *         in: path
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Success
+ *       404:
+ *         description: Error
+ */
+router.get('/:registrationNo', validateRegistrationNoParam, getVehicle);
+
+/**
+ * @swagger
+ * /vehicles/{registrationNo}:
+ *   patch:
+ *     summary: Update a vehicle (admin-only)
+ *     tags:
+ *       - Vehicles
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - name: registrationNo
+ *         in: path
+ *         required: true
+ *         schema:
+ *           type: string
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               ownerName:
+ *                 type: string
+ *               districtId:
+ *                 type: integer
+ *               isActive:
+ *                 type: boolean
+ *     responses:
+ *       200:
+ *         description: Success
+ *       404:
+ *         description: Error
+ *       422:
+ *         description: Error
+ */
+router.patch('/:registrationNo', authenticate, authorizeRoles('admin'), validateRegistrationNoParam, updateVehicle);
+
+/**
+ * @swagger
+ * /vehicles/{registrationNo}:
+ *   delete:
+ *     summary: Deactivate a vehicle (admin-only)
+ *     tags:
+ *       - Vehicles
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - name: registrationNo
+ *         in: path
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Success
+ *       404:
+ *         description: Error
+ */
+router.delete('/:registrationNo', authenticate, authorizeRoles('admin'), validateRegistrationNoParam, deleteVehicle);
 
 module.exports = router;

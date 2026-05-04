@@ -1,6 +1,6 @@
 const router = require('express').Router();
 
-const { register, login, me, adminGuardCheck } = require('@/controllers/auth.controller');
+const { register, login, me, refreshToken, logout, changePassword, adminGuardCheck } = require('@/controllers/auth.controller');
 const { authenticate, authorizeRoles } = require('@/middlewares/auth.middleware');
 
 /**
@@ -171,5 +171,69 @@ router.get('/me', authenticate, me);
  *               $ref: '#/components/schemas/ErrorResponse'
  */
 router.get('/admin-check', authenticate, authorizeRoles('admin'), adminGuardCheck);
+
+/**
+ * @swagger
+ * /auth/refresh:
+ *   post:
+ *     summary: Issue a new access token for the current valid token
+ *     tags:
+ *       - Authentication
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Success
+ *       401:
+ *         description: Error
+ */
+router.post('/refresh', authenticate, refreshToken);
+
+/**
+ * @swagger
+ * /auth/logout:
+ *   post:
+ *     summary: Logout (client discards the stateless token)
+ *     tags:
+ *       - Authentication
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Success
+ *       401:
+ *         description: Error
+ */
+router.post('/logout', authenticate, logout);
+
+/**
+ * @swagger
+ * /auth/change-password:
+ *   post:
+ *     summary: Change the current user password
+ *     tags:
+ *       - Authentication
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               currentPassword:
+ *                 type: string
+ *               newPassword:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Success
+ *       401:
+ *         description: Error
+ *       422:
+ *         description: Error
+ */
+router.post('/change-password', authenticate, changePassword);
 
 module.exports = router;

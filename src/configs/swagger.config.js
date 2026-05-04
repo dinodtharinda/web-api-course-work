@@ -128,6 +128,8 @@ const options = {
     './src/routes/tracking.route.js',
     './src/routes/vehicles.route.js',
     './src/routes/stations.route.js',
+    './src/routes/devices.route.js',
+    './src/routes/users.route.js',
   ],
 };
 

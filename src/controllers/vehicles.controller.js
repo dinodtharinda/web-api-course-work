@@ -59,6 +59,106 @@ const listVehicles = async (req, res, next) => {
   }
 };
 
+const vehicleInclude = [
+  {
+    model: District,
+    as: 'district',
+    attributes: ['id', 'name', 'code', 'provinceId', 'createdAt', 'updatedAt'],
+    required: true,
+  },
+  {
+    model: TrackingDevice,
+    as: 'trackingDevice',
+    attributes: ['id', 'deviceSerial', 'isActive', 'createdAt', 'updatedAt'],
+    required: false,
+  },
+];
+
+const findVehicleByRegistration = (registrationNo) =>
+  Vehicle.findOne({ where: { registrationNo }, include: vehicleInclude });
+
+const getVehicle = async (req, res, next) => {
+  try {
+    const vehicle = await findVehicleByRegistration(req.params.registrationNo);
+
+    if (!vehicle) {
+      return res.status(404).json({ success: false, message: 'Vehicle not found' });
+    }
+
+    return res.status(200).json({ success: true, message: 'Vehicle retrieved', data: vehicle });
+  } catch (err) {
+    return next(err);
+  }
+};
+
+const updateVehicle = async (req, res, next) => {
+  try {
+    const vehicle = await Vehicle.findOne({ where: { registrationNo: req.params.registrationNo } });
+
+    if (!vehicle) {
+      return res.status(404).json({ success: false, message: 'Vehicle not found' });
+    }
+
+    const { ownerName, districtId, isActive } = req.body;
+    const updates = {};
+
+    if (ownerName !== undefined) {
+      if (!String(ownerName).trim()) {
+        return res.status(422).json({ success: false, message: 'ownerName must not be empty' });
+      }
+      updates.ownerName = String(ownerName).trim();
+    }
+
+    if (districtId !== undefined) {
+      const district = await District.findByPk(districtId);
+      if (!district) {
+        return res.status(422).json({ success: false, message: 'Invalid districtId' });
+      }
+      updates.districtId = district.id;
+    }
+
+    if (isActive !== undefined) {
+      if (typeof isActive !== 'boolean') {
+        return res.status(422).json({ success: false, message: 'isActive must be a boolean' });
+      }
+      updates.isActive = isActive;
+    }
+
+    if (Object.keys(updates).length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'Provide at least one of ownerName, districtId, isActive',
+      });
+    }
+
+    await vehicle.update(updates);
+
+    return res.status(200).json({
+      success: true,
+      message: 'Vehicle updated',
+      data: await findVehicleByRegistration(vehicle.registrationNo),
+    });
+  } catch (err) {
+    return next(err);
+  }
+};
+
+const deleteVehicle = async (req, res, next) => {
+  try {
+    const vehicle = await Vehicle.findOne({ where: { registrationNo: req.params.registrationNo } });
+
+    if (!vehicle) {
+      return res.status(404).json({ success: false, message: 'Vehicle not found' });
+    }
+
+    await vehicle.update({ isActive: false });
+
+    return res.status(200).json({ success: true, message: 'Vehicle deactivated' });
+  } catch (err) {
+    return next(err);
+  }
+};
+
 const createVehicle = async (req, res, next) => {
   try {
     const { registrationNo, ownerName, districtId, deviceSerial } = req.body;
@@ -158,6 +258,9 @@ const listVehiclePings = async (req, res, next) => {
 
 module.exports = {
   createVehicle,
+  getVehicle,
+  updateVehicle,
+  deleteVehicle,
   listVehicles,
   listVehiclePings,
 };

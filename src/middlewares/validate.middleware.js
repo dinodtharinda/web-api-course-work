@@ -146,7 +146,35 @@ const validateStationIdParam = (req, res, next) => {
   return next();
 };
 
+const validateIdParam = (paramName) => (req, res, next) => {
+  const id = Number.parseInt(req.params[paramName], 10);
+
+  if (!Number.isInteger(id) || id <= 0) {
+    return sendValidationError(res, {
+      [paramName]: `${paramName} must be a positive integer`,
+    });
+  }
+
+  req.params[paramName] = id;
+  return next();
+};
+
+const validateDeviceSerialParam = (req, res, next) => {
+  const deviceSerial = String(req.params.deviceSerial || '').trim();
+
+  if (!deviceSerial) {
+    return sendValidationError(res, {
+      deviceSerial: 'deviceSerial is required',
+    });
+  }
+
+  req.params.deviceSerial = deviceSerial;
+  return next();
+};
+
 module.exports = {
+  validateIdParam,
+  validateDeviceSerialParam,
   validateRegistrationNoParam,
   validateTrackingPing,
   validateDateRangeQuery,

@@ -1,6 +1,15 @@
 const router = require('express').Router();
 
-const { listStations, getStationTrackingHistory } = require('@/controllers/stations.controller');
+const {
+  listStations,
+  getStation,
+  createStation,
+  updateStation,
+  deleteStation,
+  listStationVehicles,
+  getStationTrackingHistory,
+} = require('@/controllers/stations.controller');
+const { authenticate, authorizeRoles } = require('@/middlewares/auth.middleware');
 const { validateStationIdParam, validateDateRangeQuery } = require('@/middlewares/validate.middleware');
 
 /**
@@ -117,5 +126,165 @@ router.get('/', listStations);
  *               $ref: '#/components/schemas/ErrorResponse'
  */
 router.get('/:stationId/tracking/history', validateStationIdParam, validateDateRangeQuery(), getStationTrackingHistory);
+
+/**
+ * @swagger
+ * /stations:
+ *   post:
+ *     summary: Create a police station (admin-only)
+ *     tags:
+ *       - Police Stations
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               name:
+ *                 type: string
+ *               code:
+ *                 type: string
+ *               districtId:
+ *                 type: integer
+ *     responses:
+ *       201:
+ *         description: Success
+ *       409:
+ *         description: Error
+ *       422:
+ *         description: Error
+ */
+router.post('/', authenticate, authorizeRoles('admin'), createStation);
+
+/**
+ * @swagger
+ * /stations/{stationId}:
+ *   get:
+ *     summary: Get a police station
+ *     tags:
+ *       - Police Stations
+ *     parameters:
+ *       - name: stationId
+ *         in: path
+ *         required: true
+ *         schema:
+ *           type: integer
+ *     responses:
+ *       200:
+ *         description: Success
+ *       404:
+ *         description: Error
+ */
+router.get('/:stationId', validateStationIdParam, getStation);
+
+/**
+ * @swagger
+ * /stations/{stationId}:
+ *   put:
+ *     summary: Update a police station (admin-only)
+ *     tags:
+ *       - Police Stations
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - name: stationId
+ *         in: path
+ *         required: true
+ *         schema:
+ *           type: integer
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               name:
+ *                 type: string
+ *               code:
+ *                 type: string
+ *               districtId:
+ *                 type: integer
+ *     responses:
+ *       200:
+ *         description: Success
+ *       404:
+ *         description: Error
+ *       422:
+ *         description: Error
+ */
+router.put('/:stationId', authenticate, authorizeRoles('admin'), validateStationIdParam, updateStation);
+
+/**
+ * @swagger
+ * /stations/{stationId}:
+ *   delete:
+ *     summary: Delete a police station (admin-only)
+ *     tags:
+ *       - Police Stations
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - name: stationId
+ *         in: path
+ *         required: true
+ *         schema:
+ *           type: integer
+ *     responses:
+ *       200:
+ *         description: Success
+ *       404:
+ *         description: Error
+ */
+router.delete('/:stationId', authenticate, authorizeRoles('admin'), validateStationIdParam, deleteStation);
+
+/**
+ * @swagger
+ * /stations/{stationId}/vehicles:
+ *   get:
+ *     summary: List vehicles in a station jurisdiction
+ *     tags:
+ *       - Police Stations
+ *     parameters:
+ *       - name: stationId
+ *         in: path
+ *         required: true
+ *         schema:
+ *           type: integer
+ *       - name: page
+ *         in: query
+ *         required: false
+ *         schema:
+ *           type: integer
+ *       - name: pageSize
+ *         in: query
+ *         required: false
+ *         schema:
+ *           type: integer
+ *       - name: search
+ *         in: query
+ *         required: false
+ *         schema:
+ *           type: string
+ *       - name: sortBy
+ *         in: query
+ *         required: false
+ *         schema:
+ *           type: string
+ *       - name: sortOrder
+ *         in: query
+ *         required: false
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Success
+ *       404:
+ *         description: Error
+ */
+router.get('/:stationId/vehicles', validateStationIdParam, listStationVehicles);
 
 module.exports = router;

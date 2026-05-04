@@ -1,6 +1,6 @@
 const { Op } = require('sequelize');
 const { Province, District, Vehicle, LocationPing } = require('@/models');
-const { parseListQuery } = require('@/utils/list-query.util');
+const { parseListQuery, buildListMeta } = require('@/utils/list-query.util');
 
 const listProvinces = async (req, res, next) => {
   try {
@@ -55,6 +55,51 @@ const listProvinces = async (req, res, next) => {
     return next(err);
   }
 };
+
+const queryDistricts = async (req, res, next, provinceId) => {
+  try {
+    const query = parseListQuery(req.query, {
+      defaultSortBy: 'name',
+      defaultSortOrder: 'ASC',
+      allowedSortBy: ['name', 'code', 'createdAt', 'updatedAt'],
+    });
+
+    const where = {};
+    const filterProvinceId = provinceId ?? Number.parseInt(req.query.provinceId, 10);
+
+    if (Number.isInteger(filterProvinceId) && filterProvinceId > 0) {
+      where.provinceId = filterProvinceId;
+    }
+
+    if (query.search) {
+      where.name = { [Op.like]: `%${query.search}%` };
+    }
+
+    if (provinceId !== undefined && !(await Province.findByPk(provinceId))) {
+      return res.status(404).json({ success: false, message: 'Province not found' });
+    }
+
+    const { rows, count } = await District.findAndCountAll({
+      where,
+      order: [[query.sortBy, query.sortOrder]],
+      limit: query.limit,
+      offset: query.offset,
+    });
+
+    return res.status(200).json({
+      success: true,
+      message: 'Districts retrieved',
+      data: rows,
+      meta: buildListMeta(query, count),
+    });
+  } catch (err) {
+    return next(err);
+  }
+};
+
+const listDistricts = (req, res, next) => queryDistricts(req, res, next);
+
+const listProvinceDistricts = (req, res, next) => queryDistricts(req, res, next, req.params.provinceId);
 
 const ingestLocationPing = async (req, res, next) => {
   try {
@@ -343,6 +388,8 @@ const getFilteredHistory = async (req, res, next) => {
 };
 module.exports = {
   listProvinces,
+  listDistricts,
+  listProvinceDistricts,
   ingestLocationPing,
   getLatestLocation,
   getMovementHistory,
